@@ -6,6 +6,9 @@ lib-cov
 *.out
 *.pid
 *.gz
+*.pdf
+*.cbz
+*.cbr
 
 pids
 logs
