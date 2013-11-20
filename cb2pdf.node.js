@@ -38,7 +38,7 @@ var cbc = {
 	dooeet: function() {
 		console.log('Making temp path: '+ tmp);
 		fs.mkdir(tmp,'0777',function(err) {
-			if (err) throw err;
+			//if (err) throw err;
 			if (cbc.format === 'cbr') {
 				console.log('Extracting cbr: '+ cbc.comic);
 				var rf = new unrar.RarFile(cbc.comic);
@@ -96,11 +96,3 @@ var cbc = {
 
 cbc.init();
 
-
-
-/*
-im.convert(['*.jpg', 'test.pdf'], function(err, stdout){
-	if (err) throw err;
-	console.log('stdout:', stdout);
-});
-*/
