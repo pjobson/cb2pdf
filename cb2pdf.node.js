@@ -15,6 +15,7 @@ var tmp   = './tmp/';
 var usage = 'Usage: cb2pdf.node.js --comic="path/to/comic.cbr|cbz"';
 
 var cbc = {
+	gsLibPath: '/usr/local/share/ghostscript/lib/',
 	format: '',
 	comic: argv.comic,
 	imageFiles: [],
@@ -121,7 +122,7 @@ var cbc = {
 
 		console.log('Building PDF: '+ pdfFile);
 		
-		var gs = 'gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -o "'+ pdfFile +'" /usr/local/share/ghostscript/lib/viewjpeg.ps -c "'+ param +'"';
+		var gs = 'gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -o "'+ pdfFile +'" '+ cbc.gsLibPath +'viewjpeg.ps -c "'+ param +'"';
 			
 		exec(gs, function() {
 			cbc.removeTemp();
