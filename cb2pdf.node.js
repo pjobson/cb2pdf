@@ -1,12 +1,15 @@
 #!/usr/local/bin/node
 
+var sys      = require('sys');                      // http://nodejs.org/api/sys.html
+var exec     = require('child_process').exec;
 var fs       = require('fs');                       // http://nodejs.org/api/fs.html
 var argv     = require('optimist').argv;            // https://github.com/substack/node-optimist
-var im       = require('node-imagemagick');         // https://github.com/rsms/node-imagemagick
+var im       = require('imagemagick');              // https://github.com/rsms/node-imagemagick
 var unrar    = require('rarfile');                  // https://github.com/sandy98/node-rarfile
 var unzip    = require('unzip');                    // https://npmjs.org/package/unzip
 var rimraf   = require('rimraf');                   // https://github.com/isaacs/rimraf
 var find     = require('find');                     // https://npmjs.org/package/find
+var Magic    = require('mmmagic').Magic;            // https://github.com/mscdex/mmmagic
 
 var tmp   = './tmp/';
 var usage = 'Usage: cb2pdf.node.js --comic="path/to/comic.cbr|cbz"';
@@ -17,8 +20,20 @@ var cbc = {
 	imageFiles: [],
 	init: function() {
 		cbc.errorCheck();
-		cbc.format = cbc.comic.match(/\.(cb[rz])$/)[1].toLowerCase();
-		cbc.dooeet();
+		cbc.formatDetection();
+	},
+	formatDetection: function() {
+		// I have found that there are many erronously extensioned files in the world, I detect first.
+		var magic = new Magic();
+		magic.detectFile(cbc.comic, function(err, result) {
+			if (err) throw err;
+			cbc.format = result.match(/^\w\w\w/)[0].toLowerCase();
+			if (['zip','rar'].indexOf(cbc.format) === -1) {
+				console.log('Invalid file type:'+ cbc.format);
+				process.exit(1);
+			}
+			cbc.dooeet();
+		});
 	},
 	errorCheck: function() {
 		if (!cbc.comic) {
@@ -39,7 +54,7 @@ var cbc = {
 		console.log('Making temp path: '+ tmp);
 		fs.mkdir(tmp,'0777',function(err) {
 			//if (err) throw err;
-			if (cbc.format === 'cbr') {
+			if (cbc.format === 'rar') {
 				console.log('Extracting cbr: '+ cbc.comic);
 				var rf = new unrar.RarFile(cbc.comic);
 				// wait a sec to get the files
@@ -57,7 +72,7 @@ var cbc = {
 							fs.writeFile(tmpFile,fdata,function(err) {
 								if (err) throw err;
 								if (++fcount === rf.names.length) {
-									cbc.buildPDF();
+									cbc.identifyImages();
 								}
 							});
 						});
@@ -69,21 +84,47 @@ var cbc = {
 				setTimeout(function() {
 					find.file(/\.(jpeg|jpg|png|gif)$/i, tmp, function(files) {
 						cbc.imageFiles = files;
-						cbc.buildPDF();
+						cbc.identifyImages();
 					});
 				},1000);
 			}
 		});
 	},
+	identifyImages: function() {
+		console.log('Getting image sizes.');
+		var img = cbc.imageFiles;
+		cbc.imageFiles = [];
+		img.forEach(function(file,iter,arr) {
+			im.identify(file, function(err, features){
+				cbc.imageFiles.push({
+					file: file,
+					height: features.height,
+					width: features.width
+				});
+				
+				if (iter+1 === arr.length) {
+					cbc.buildPDF();
+				}
+			});
+		});		
+	},
 	buildPDF: function() {
-		var pdf = cbc.comic.replace(/\.cb[rz]/i,'.pdf');
-		console.log('Building PDF: '+ pdf);
-		
-		cbc.imageFiles.sort().push(pdf);
+		var param = '';
+		var cee = '<</PageSize [WIDTH HEIGHT]>> setpagedevice (FILE) viewJPEG showpage';
+		cbc.imageFiles.sort(function(a,b) {
+			return (a.file>b.file) ? 1 : (b.file>a.file) ? -1 : 0;
+		}).forEach(function(f) {
+			param += ' '+ cee.replace(/WIDTH/,f.width).replace(/HEIGHT/,f.height).replace(/FILE/,f.file);
+		});
 
-		im.convert(cbc.imageFiles, function(err, stdout){
-  			if (err) throw err;
-  			cbc.removeTemp();
+		var pdfFile = cbc.comic.replace(/\.cb[rz]/i,'.pdf');
+
+		console.log('Building PDF: '+ pdfFile);
+		
+		var gs = 'gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -o "'+ pdfFile +'" /usr/local/share/ghostscript/lib/viewjpeg.ps -c "'+ param +'"';
+			
+		exec(gs, function() {
+			cbc.removeTemp();
 		});
 	},
 	removeTemp: function() {

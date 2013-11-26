@@ -9,5 +9,6 @@ Usage:
 $ /path/to/cb2pdf/cb2pdf.node.js --comic="/path/to/comic.(cbr|cbz)"
 ```
 
-Errors may be thrown if a cbr file is erronously named cbz or vice versa.  I'll fix this later.
+Requires the following npm modules: optimist, imagemagick, rarfile, unzip, rimraf
 
+Added automatic detection for file type CBR (RAR) and CBZ (ZIP) to avoid misnamed file errors.
