@@ -123,7 +123,8 @@ var cbc = {
 		
 		var gs = 'gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -o "'+ pdfFile +'" viewjpeg.ps -c "'+ param +'"';
 			
-		exec(gs, function() {
+		exec(gs, function(err) {
+            if (err) throw err;
 			cbc.removeTemp();
 		});
 	},
