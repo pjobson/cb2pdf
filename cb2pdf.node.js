@@ -4,7 +4,6 @@ var sys      = require('sys');                      // http://nodejs.org/api/sys
 var exec     = require('child_process').exec;
 var fs       = require('fs');                       // http://nodejs.org/api/fs.html
 var argv     = require('optimist').argv;            // https://github.com/substack/node-optimist
-var im       = require('imagemagick');              // https://github.com/rsms/node-imagemagick
 var unrar    = require('rarfile');                  // https://github.com/sandy98/node-rarfile
 var admzip   = require('adm-zip');                  // https://github.com/cthackers/adm-zip
 var rimraf   = require('rimraf');                   // https://github.com/isaacs/rimraf
@@ -94,18 +93,22 @@ var cbc = {
 		var img = cbc.imageFiles;
 		cbc.imageFiles = [];
 		img.forEach(function(file,iter,arr) {
-			im.identify(file, function(err, features){
-				cbc.imageFiles.push({
-					file: file,
-					height: features.height,
-					width: features.width
-				});
-                
+            var identify = 'identify "'+ file +'"';
+            exec(identify, function(err, stdout, stderr) {
+                if (err) throw err;
+                if (stderr) throw stderr;
+                cbc.imageFiles.push({
+                    file: file,
+                    height: stdout.split(' ')[2].split('x')[1],
+                    width: stdout.split(' ')[2].split('x')[0]
+                });
+
                 if (img.length === cbc.imageFiles.length) {
-					cbc.buildPDF();
-				}
-			});
-		});		
+                    cbc.buildPDF();
+                }
+
+            });
+		});
 	},
 	buildPDF: function() {
 		var param = '';
