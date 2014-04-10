@@ -6,7 +6,7 @@ var fs       = require('fs');                       // http://nodejs.org/api/fs.
 var argv     = require('optimist').argv;            // https://github.com/substack/node-optimist
 var im       = require('imagemagick');              // https://github.com/rsms/node-imagemagick
 var unrar    = require('rarfile');                  // https://github.com/sandy98/node-rarfile
-var unzip    = require('unzip');                    // https://npmjs.org/package/unzip
+var admzip   = require('adm-zip');                  // https://github.com/cthackers/adm-zip
 var rimraf   = require('rimraf');                   // https://github.com/isaacs/rimraf
 var find     = require('find');                     // https://npmjs.org/package/find
 var Magic    = require('mmmagic').Magic;            // https://github.com/mscdex/mmmagic
@@ -80,14 +80,13 @@ var cbc = {
 				},1000);
 			} else {
 				console.log('Extracting cbz: '+ cbc.comic);
-				fs.createReadStream(cbc.comic).pipe(unzip.Extract({ path: tmp }));
-				setTimeout(function() {
-					find.file(/\.(jpeg|jpg|png|gif)$/i, tmp, function(files) {
-						cbc.imageFiles = files;
-						cbc.identifyImages();
-					});
-				},1000);
-			}
+				var rs = fs.createReadStream(cbc.comic);
+                var zip = new admzip(cbc.comic).extractAllTo(tmp);
+                find.file(/\.(jpeg|jpg|png|gif)$/i, tmp, function(files) {
+                    cbc.imageFiles = files;
+                    cbc.identifyImages();
+                });
+            }
 		});
 	},
 	identifyImages: function() {
@@ -101,8 +100,8 @@ var cbc = {
 					height: features.height,
 					width: features.width
 				});
-				
-				if (iter+1 === arr.length) {
+                
+                if (img.length === cbc.imageFiles.length) {
 					cbc.buildPDF();
 				}
 			});
@@ -122,9 +121,8 @@ var cbc = {
 		console.log('Building PDF: '+ pdfFile);
 		
 		var gs = 'gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -o "'+ pdfFile +'" viewjpeg.ps -c "'+ param +'"';
-			
-		exec(gs, function(err) {
-            if (err) throw err;
+
+		exec(gs, function() {
 			cbc.removeTemp();
 		});
 	},
