@@ -10,7 +10,7 @@ var rimraf   = require('rimraf');                   // https://github.com/isaacs
 var find     = require('find');                     // https://npmjs.org/package/find
 var Magic    = require('mmmagic').Magic;            // https://github.com/mscdex/mmmagic
 
-var tmp   = './tmp/';
+var tmp   = './'+ new Date().getTime() +'/';
 var usage = 'Usage: cb2pdf.node.js --comic="path/to/comic.cbr|cbz"';
 
 var cbc = {
@@ -99,8 +99,8 @@ var cbc = {
                 if (stderr) throw stderr;
                 cbc.imageFiles.push({
                     file: file,
-                    height: stdout.split(' ')[2].split('x')[1],
-                    width: stdout.split(' ')[2].split('x')[0]
+                    height: stdout.match(/(\d+?)x(\d+)/)[2],
+                    width: stdout.match(/(\d+?)x(\d+)/)[1]
                 });
 
                 if (img.length === cbc.imageFiles.length) {
