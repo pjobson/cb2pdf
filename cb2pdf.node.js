@@ -61,7 +61,7 @@ var cbc = {
             var cmd = 'unrar e -y -inul "'+ cbc.comic +'" '+ tmp;
             exec(cmd, function(err, stdout, stderr) {
                 // unrar may throw errors but not actually die
-                if (err.killed === true) throw err;
+                if (err != null && err.killed === true) throw err;
                 cbc.findFiles();
                 return;
             });
