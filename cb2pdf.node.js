@@ -4,7 +4,6 @@ var sys      = require('sys');                      // http://nodejs.org/api/sys
 var exec     = require('child_process').exec;
 var fs       = require('fs');                       // http://nodejs.org/api/fs.html
 var argv     = require('optimist').argv;            // https://github.com/substack/node-optimist
-var unrar    = require('rarfile');                  // https://github.com/sandy98/node-rarfile
 var admzip   = require('adm-zip');                  // https://github.com/cthackers/adm-zip
 var rimraf   = require('rimraf');                   // https://github.com/isaacs/rimraf
 var find     = require('find');                     // https://npmjs.org/package/find
@@ -52,42 +51,34 @@ var cbc = {
 	dooeet: function() {
 		console.log('Making temp path: '+ tmp);
 		fs.mkdir(tmp,'0777',function(err) {
-			//if (err) throw err;
-			if (cbc.format === 'rar') {
-				console.log('Extracting cbr: '+ cbc.comic);
-				var rf = new unrar.RarFile(cbc.comic);
-				// wait a sec to get the files
-				setTimeout(function() {
-					var fcount  = 0;
-					var flength = rf.names.length;
-					rf.names = rf.names.filter(function(file) {
-						return /\.(jpg|png|gif|jpeg)/.test(file.toLowerCase());
-					});
-					var fcount=0;
-					rf.names.forEach(function(file) {
-						rf.readFile(file, function(err, fdata) {
-							var tmpFile = tmp+file.replace(/[^a-z0-9\.]/ig,'_');
-							cbc.imageFiles.push(tmpFile);
-							fs.writeFile(tmpFile,fdata,function(err) {
-								if (err) throw err;
-								if (++fcount === rf.names.length) {
-									cbc.identifyImages();
-								}
-							});
-						});
-					});
-				},1000);
-			} else {
-				console.log('Extracting cbz: '+ cbc.comic);
-				var rs = fs.createReadStream(cbc.comic);
-                var zip = new admzip(cbc.comic).extractAllTo(tmp);
-                find.file(/\.(jpeg|jpg|png|gif)$/i, tmp, function(files) {
-                    cbc.imageFiles = files;
-                    cbc.identifyImages();
-                });
-            }
+			if (err) throw err;
+            (cbc.format === 'rar') ? cbc.extract.unrar() : cbc.extract.unzip();
 		});
 	},
+    extract: {
+        unrar: function() {
+            console.log('Extracting cbr: '+ cbc.comic);
+            var cmd = 'unrar e -y -inul "'+ cbc.comic +'" '+ tmp;
+            exec(cmd, function(err, stdout, stderr) {
+                // unrar may throw errors but not actually die
+                if (err.killed === true) throw err;
+                cbc.findFiles();
+                return;
+            });
+        },
+        unzip: function() {
+            console.log('Extracting cbz: '+ cbc.comic);
+            var rs = fs.createReadStream(cbc.comic);
+            var zip = new admzip(cbc.comic).extractAllTo(tmp);
+            cbc.findFiles();
+        }
+    },
+    findFiles: function() {
+        find.file(/\.(jpeg|jpg|png|gif)$/i, tmp, function(files) {
+            cbc.imageFiles = files;
+            cbc.identifyImages();
+        });
+    },
 	identifyImages: function() {
 		console.log('Getting image sizes.');
 		var img = cbc.imageFiles;
