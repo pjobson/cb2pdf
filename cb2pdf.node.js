@@ -10,15 +10,28 @@ var find     = require('find');                     // https://npmjs.org/package
 var Magic    = require('mmmagic').Magic;            // https://github.com/mscdex/mmmagic
 
 var tmp   = './'+ new Date().getTime() +'/';
-var usage = 'Usage: cb2pdf.node.js --comic="path/to/comic.cbr|cbz"';
+var usage  = "Usage: ";
+    usage += "\n"+'To convert from cbr/cbz to PDF: cb2pdf.node.js --comic="path/to/comic.cbr|cbz"';
+    usage += "\n"+'To create a PDF from a path of images: cb2pdf.node.js --path="path/to/images/" --bookname="Name of PDF"';
 
 var cbc = {
 	format: '',
-	comic: argv.comic,
+	comic: argv.comic || null,
+    convPath: argv.path || null,
+    bookName: argv.bookname || null,
+    isConversion: false,
+    isCreation: false,
 	imageFiles: [],
 	init: function() {
-		cbc.errorCheck();
-		cbc.formatDetection();
+		cbc.errorCheck();        
+        if (cbc.isConversion) {
+            cbc.formatDetection();
+        } else if (cbc.isCreation) {
+            tmp = cbc.convPath;
+            console.log(cbc.bookName);
+            cbc.comic = cbc.bookName.replace(/\.pdf$/,'')+'.pdf';
+            cbc.startCreation();
+        }
 	},
 	formatDetection: function() {
 		// I have found that there are many erronously extensioned files in the world, I detect first.
@@ -30,31 +43,48 @@ var cbc = {
 				console.log('Invalid file type:'+ cbc.format);
 				process.exit(1);
 			}
-			cbc.dooeet();
+            
+            cbc.startConversion();
 		});
 	},
 	errorCheck: function() {
-		if (!cbc.comic) {
-			console.log('Missing comic file.');
-			console.log(usage);
-			process.exit(1);
-		}
+        var tooManyParams = (cbc.comic !== null && cbc.convPath !== null && cbc.bookName !== null);
+        cbc.isConversion = (tooManyParams === false && cbc.comic !== null);
+        cbc.isCreation   = (tooManyParams === false && cbc.isConversion === false && cbc.convPath !== null && cbc.bookName !== null);
+        
+        // Invalid parameter combination.
+        if (tooManyParams == true) {
+            console.log('Invalid parameter combination.');
+            console.log(usage);
+            process.exit(1);
+        }
 
-		if (!/\.cb[rz]$/.test(cbc.comic.toLowerCase())) {
-			console.log('Invalid comic file.  I only support cbr and cbz files.');
-			console.log(usage);
-			process.exit(1);
-		}
-
+        // Invalid file type
+        if (cbc.isConversion === true && !/\.cb[rz]$/.test(cbc.comic.toLowerCase())) {
+            console.log('Invalid comic file.  I only support cbr and cbz files.');
+            console.log(usage);
+            process.exit(1);
+        }
+        
+        // Not a conversion or creation.
+        if (cbc.isConversion === false && cbc.isCreation === false) {
+            console.log("Not sure what you're trying to do.");
+            console.log(usage);
+            process.exit(1);
+        }
+        
 		return;
 	},
-	dooeet: function() {
+	startConversion: function() {
 		console.log('Making temp path: '+ tmp);
 		fs.mkdir(tmp,'0777',function(err) {
 			if (err) throw err;
             (cbc.format === 'rar') ? cbc.extract.unrar() : cbc.extract.unzip();
 		});
 	},
+    startCreation: function() {
+        cbc.findFiles();
+    },
     extract: {
         unrar: function() {
             console.log('Extracting cbr: '+ cbc.comic);
@@ -76,47 +106,19 @@ var cbc = {
     findFiles: function() {
         find.file(/\.(jpeg|jpg|png|gif)$/i, tmp, function(files) {
             cbc.imageFiles = files;
-            cbc.identifyImages();
+            cbc.buildPDF();
         });
     },
-	identifyImages: function() {
-		console.log('Getting image sizes.');
-		var img = cbc.imageFiles;
-		cbc.imageFiles = [];
-		img.forEach(function(file,iter,arr) {
-            var identify = 'identify "'+ file +'"';
-            exec(identify, function(err, stdout, stderr) {
-                if (err) throw err;
-                if (stderr) throw stderr;
-                cbc.imageFiles.push({
-                    file: file,
-                    height: stdout.match(/(\d+?)x(\d+)/)[2],
-                    width: stdout.match(/(\d+?)x(\d+)/)[1]
-                });
-
-                if (img.length === cbc.imageFiles.length) {
-                    cbc.buildPDF();
-                }
-
-            });
-		});
-	},
 	buildPDF: function() {
-		var param = '';
-		var cee = '<</PageSize [WIDTH HEIGHT]>> setpagedevice (FILE) viewJPEG showpage';
-		cbc.imageFiles.sort(function(a,b) {
-			return (a.file>b.file) ? 1 : (b.file>a.file) ? -1 : 0;
-		}).forEach(function(f) {
-			param += ' '+ cee.replace(/WIDTH/,f.width).replace(/HEIGHT/,f.height).replace(/FILE/,f.file);
-		});
+		var convert = 'convert ';
+        cbc.imageFiles.sort().forEach(function(f) {
+            convert += '"'+ f +'" ';
+        });
 
-		var pdfFile = cbc.comic.replace(/\.cb[rz]/i,'.pdf');
+        convert += ' -quality 0 -adjoin "'+ cbc.comic.replace(/\.cb[rz]/i,'.pdf') +'"';
 
-		console.log('Building PDF: '+ pdfFile);
-		
-		var gs = 'gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -o "'+ pdfFile +'" viewjpeg.ps -c "'+ param +'"';
-
-		exec(gs, function() {
+        console.log('Making PDF: '+ cbc.comic.replace(/\.cb[rz]/i,'.pdf'));
+		exec(convert, function() {
 			cbc.removeTemp();
 		});
 	},
@@ -125,6 +127,7 @@ var cbc = {
 		rimraf(tmp, function(err) {
 			if (err) throw err;
 		});
+        console.log("---Finished---\n");
 	}
 };
 
