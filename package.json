@@ -6,7 +6,8 @@
     "adm-zip": "~0.4.4",
     "rimraf": "~2.2.6",
     "find": "~0.1.5",
-    "mmmagic": "~0.3.7"
+    "mmmagic": "~0.3.7",
+    "node-imagemagick": "0.1.8"
   },
   "repository" : {
     "type" : "git",
