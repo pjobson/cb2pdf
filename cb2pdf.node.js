@@ -1,4 +1,4 @@
-#!/usr/local/bin/node
+#!/usr/bin/env node
 
 var sys      = require('sys');                      // http://nodejs.org/api/sys.html
 var exec     = require('child_process').exec;
