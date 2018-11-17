@@ -9,8 +9,11 @@
     "mmmagic": "~0.3.7",
     "node-imagemagick": "0.1.8"
   },
-  "repository" : {
-    "type" : "git",
-    "url" : "http://github.com/pjobson/cb2pdf.git"
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/pjobson/cb2pdf.git"
+  },
+  "bin": {
+    "cb2pdf": "./cb2pdf.node.js"
   }
 }
