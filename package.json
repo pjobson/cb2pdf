@@ -2,12 +2,12 @@
   "name": "cb2pdf",
   "version": "0.0.0",
   "dependencies": {
-    "optimist": "~0.6.1",
-    "adm-zip": "~0.4.4",
-    "rimraf": "~2.2.6",
-    "find": "~0.1.5",
-    "mmmagic": "~0.5.3",
-    "node-imagemagick": "0.1.8"
+    "adm-zip": "^0.4.16",
+    "find": "^0.1.7",
+    "mmmagic": "^0.5.3",
+    "node-imagemagick": "^0.1.8",
+    "optimist": "^0.6.1",
+    "rimraf": "^2.2.8"
   },
   "repository": {
     "type": "git",
